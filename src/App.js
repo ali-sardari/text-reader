@@ -1,36 +1,90 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './index.css';
 
 const App = () => {
     const [text, setText] = useState('');
     const [voices, setVoices] = useState([]);
     const [voiceOptions, setVoiceOptions] = useState({});
-    const [defaultVoice, setDefaultVoice] = useState('');
     const [rate, setRate] = useState(1);
     const [delay, setDelay] = useState(200);
     const [isPlaying, setIsPlaying] = useState(false);
 
+    // State to keep track of default voices
+    const [defaultVoiceNames, setDefaultVoiceNames] = useState([]);
+    const [initialLoad, setInitialLoad] = useState(true);
+
+    // List of default voices to choose from
+    const possibleDefaultVoices = [
+        "Microsoft Emma Online (Natural) - English (United States)",
+        "Microsoft Jenny Online (Natural) - English (United Kingdom)",
+        "Microsoft Andrew Online (Natural) - English (United States)",
+        "Microsoft Mark Online (Natural) - English (United States)",
+        "Microsoft Ellen Online (Natural) - English (United Kingdom)",
+        "Microsoft Aria Online (Natural) - English (United States)",
+        "Microsoft David Online (Natural) - English (United States)"
+    ];
+
+    // Function to filter voices by language
+    const filterEnglishVoices = (voices) => {
+        return voices.filter(voice => {
+            const lang = voice.lang.toLowerCase();
+            console.log('xxx.Lang:', 'Voice:', lang, voice.name);
+            return lang === 'en-us' || lang === 'en-gb' || lang === 'nl-nl' || lang === 'fa-ir';
+        });
+    };
+
     useEffect(() => {
         const populateVoices = () => {
-            const voices = speechSynthesis.getVoices();
-            setVoices(voices);
-
-            const defaultVoice = voices.find(voice => voice.name === "Microsoft EmmaMultilingual Online (Natural) - English (United States)");
-            if (defaultVoice) {
-                setDefaultVoice(defaultVoice.name);
-                setVoiceOptions((prev) => {
-                    const newVoiceOptions = {};
-                    getUniquePrefixes().forEach((prefix) => {
-                        newVoiceOptions[prefix] = defaultVoice.name;
-                    });
-                    return { ...newVoiceOptions, ...prev, "DEFAULT": defaultVoice.name };
-                });
+            const allVoices = speechSynthesis.getVoices();
+            if (allVoices.length === 0) {
+                console.error('No voices found.');
+                return;
             }
+
+            const englishVoices = filterEnglishVoices(allVoices).sort((a, b) => {
+                return a.lang.localeCompare(b.lang);
+            });
+            setVoices(englishVoices);
         };
 
         populateVoices();
         speechSynthesis.onvoiceschanged = populateVoices;
     }, []);
+
+    const setDefaultVoices = useCallback(() => {
+        const uniquePrefixes = getUniquePrefixes();
+        if (uniquePrefixes.length > 0) {
+            let newVoiceOptions = {};
+            if (uniquePrefixes.length === 1) {
+                // For a single unique prefix, set a default voice
+                const defaultVoice = possibleDefaultVoices.find(name =>
+                    voices.some(voice => voice.name === name)
+                );
+                if (defaultVoice) {
+                    newVoiceOptions[uniquePrefixes[0]] = defaultVoice;
+                }
+            } else {
+                // For multiple prefixes, randomly assign voices
+                const availableVoices = possibleDefaultVoices.filter(name =>
+                    voices.some(voice => voice.name === name)
+                );
+                const randomizedVoices = shuffleArray(availableVoices);
+
+                uniquePrefixes.forEach((prefix, index) => {
+                    newVoiceOptions[prefix] = randomizedVoices[index % randomizedVoices.length];
+                });
+                newVoiceOptions["DEFAULT"] = randomizedVoices[0] || '';
+            }
+            setVoiceOptions(newVoiceOptions);
+            setInitialLoad(false);
+        }
+    }, [voices]);
+
+    useEffect(() => {
+        if (text && initialLoad) {
+            setDefaultVoices();
+        }
+    }, [text, setDefaultVoices, initialLoad]);
 
     const speakText = () => {
         if (window.speechSynthesis.speaking) {
@@ -44,7 +98,10 @@ const App = () => {
             const voiceMap = {};
 
             Object.keys(voiceOptions).forEach((key) => {
-                voiceMap[key] = voices.find(voice => voice.name === voiceOptions[key]);
+                const voice = voices.find(voice => voice.name === voiceOptions[key]);
+                if (voice) {
+                    voiceMap[key] = voice;
+                }
             });
 
             const speakLine = async (index) => {
@@ -56,6 +113,7 @@ const App = () => {
                     } else {
                         prefix = "DEFAULT";
                     }
+
                     const utterance = new SpeechSynthesisUtterance(sentence);
                     utterance.voice = voiceMap[prefix] || voiceMap["DEFAULT"];
                     utterance.rate = rate;
@@ -79,7 +137,7 @@ const App = () => {
     };
 
     const handleVoiceChange = (prefix, newVoice) => {
-        setVoiceOptions((prev) => ({
+        setVoiceOptions(prev => ({
             ...prev,
             [prefix]: newVoice
         }));
@@ -99,6 +157,14 @@ const App = () => {
         return Array.from(prefixes);
     };
 
+    const shuffleArray = (array) => {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    };
+
     const uniquePrefixes = getUniquePrefixes();
 
     const handlePlayPause = () => {
@@ -112,10 +178,10 @@ const App = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
-            <div className="w-full max-w-lg bg-white p-8 rounded-lg shadow-lg">
+            <div className="w-full max-w-screen-lg bg-white p-8 rounded-lg shadow-lg">
                 <h1 className="text-3xl font-bold text-gray-800 mb-6">Text Reader</h1>
                 <textarea
-                    className="w-full h-40 p-4 border border-gray-300 rounded-lg resize-none mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full h-80 p-4 border border-gray-300 rounded-lg resize-none mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Type your text here..."
                     value={text}
                     onChange={(e) => setText(e.target.value)}
@@ -126,7 +192,7 @@ const App = () => {
                         <div className="relative">
                             <select
                                 className="w-full p-2 border border-gray-300 rounded-lg bg-white pr-10 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                value={voiceOptions[prefix] || defaultVoice}
+                                value={voiceOptions[prefix] || ''}
                                 onChange={(e) => handleVoiceChange(prefix, e.target.value)}
                             >
                                 {voices.map((voice) => (
@@ -147,7 +213,7 @@ const App = () => {
                         <div className="relative">
                             <select
                                 className="w-full p-2 border border-gray-300 rounded-lg bg-white pr-10 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                value={voiceOptions["DEFAULT"] || defaultVoice}
+                                value={voiceOptions["DEFAULT"] || ''}
                                 onChange={(e) => handleVoiceChange("DEFAULT", e.target.value)}
                             >
                                 {voices.map((voice) => (
