@@ -79,11 +79,11 @@ const App = () => {
                 ...prev,
                 ...newVoiceOptions
             }));
-            saveSettings({
-                voiceOptions: newVoiceOptions,
-                rate,
-                delay
-            });
+            // saveSettings({
+            //     voiceOptions: newVoiceOptions,
+            //     rate,
+            //     delay
+            // });
         }
     }, [voices, rate, delay]);
 
