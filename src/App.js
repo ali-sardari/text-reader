@@ -79,6 +79,8 @@ const App = () => {
                 ...prev,
                 ...newVoiceOptions
             }));
+
+            //TODO: save settings to local storage - I have commented this out because it was causing an error
             // saveSettings({
             //     voiceOptions: newVoiceOptions,
             //     rate,
