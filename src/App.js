@@ -9,26 +9,17 @@ const App = () => {
     const [delay, setDelay] = useState(200);
     const [isPlaying, setIsPlaying] = useState(false);
 
-    // State to keep track of default voices
-    const [defaultVoiceNames, setDefaultVoiceNames] = useState([]);
-    const [initialLoad, setInitialLoad] = useState(true);
-
     // List of default voices to choose from
     const possibleDefaultVoices = [
         "Microsoft Emma Online (Natural) - English (United States)",
-        "Microsoft Jenny Online (Natural) - English (United Kingdom)",
-        "Microsoft Andrew Online (Natural) - English (United States)",
-        "Microsoft Mark Online (Natural) - English (United States)",
-        "Microsoft Ellen Online (Natural) - English (United Kingdom)",
-        "Microsoft Aria Online (Natural) - English (United States)",
-        "Microsoft David Online (Natural) - English (United States)"
+        "Microsoft Jenny Online (Natural) - English (United States)",
+        "Microsoft Andrew Online (Natural) - English (United States)"
     ];
 
     // Function to filter voices by language
     const filterEnglishVoices = (voices) => {
         return voices.filter(voice => {
             const lang = voice.lang.toLowerCase();
-            console.log('xxx.Lang:', 'Voice:', lang, voice.name);
             return lang === 'en-us' || lang === 'en-gb' || lang === 'nl-nl' || lang === 'fa-ir';
         });
     };
@@ -53,18 +44,20 @@ const App = () => {
 
     const setDefaultVoices = useCallback(() => {
         const uniquePrefixes = getUniquePrefixes();
+
+        let newVoiceOptions = {};
         if (uniquePrefixes.length > 0) {
-            let newVoiceOptions = {};
             if (uniquePrefixes.length === 1) {
-                // For a single unique prefix, set a default voice
-                const defaultVoice = possibleDefaultVoices.find(name =>
+                // For a single unique prefix, set Emma as the default voice
+                const emmaVoice = possibleDefaultVoices.find(name =>
                     voices.some(voice => voice.name === name)
                 );
-                if (defaultVoice) {
-                    newVoiceOptions[uniquePrefixes[0]] = defaultVoice;
+
+                if (emmaVoice) {
+                    newVoiceOptions[uniquePrefixes[0]] = emmaVoice;
                 }
             } else {
-                // For multiple prefixes, randomly assign voices
+                // For multiple prefixes, set default voices from the list
                 const availableVoices = possibleDefaultVoices.filter(name =>
                     voices.some(voice => voice.name === name)
                 );
@@ -75,16 +68,18 @@ const App = () => {
                 });
                 newVoiceOptions["DEFAULT"] = randomizedVoices[0] || '';
             }
-            setVoiceOptions(newVoiceOptions);
-            setInitialLoad(false);
+            setVoiceOptions(prev => ({
+                ...prev,
+                ...newVoiceOptions
+            }));
         }
     }, [voices]);
 
     useEffect(() => {
-        if (text && initialLoad) {
+        if (text) {
             setDefaultVoices();
         }
-    }, [text, setDefaultVoices, initialLoad]);
+    }, [text, setDefaultVoices]);
 
     const speakText = () => {
         if (window.speechSynthesis.speaking) {
@@ -186,13 +181,13 @@ const App = () => {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                 />
-                {uniquePrefixes.length > 0 && uniquePrefixes.map((prefix) => (
+                {uniquePrefixes.length > 0 && uniquePrefixes.map((prefix,index) => (
                     <div key={prefix} className="mb-4">
                         <label className="block text-lg font-medium text-gray-700 mb-2">Voice {prefix}</label>
                         <div className="relative">
                             <select
                                 className="w-full p-2 border border-gray-300 rounded-lg bg-white pr-10 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                value={voiceOptions[prefix] || ''}
+                                value={voiceOptions[prefix] || possibleDefaultVoices[index] || ''}
                                 onChange={(e) => handleVoiceChange(prefix, e.target.value)}
                             >
                                 {voices.map((voice) => (
@@ -213,7 +208,7 @@ const App = () => {
                         <div className="relative">
                             <select
                                 className="w-full p-2 border border-gray-300 rounded-lg bg-white pr-10 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                value={voiceOptions["DEFAULT"] || ''}
+                                value={voiceOptions["DEFAULT"] || possibleDefaultVoices[0] || ''}
                                 onChange={(e) => handleVoiceChange("DEFAULT", e.target.value)}
                             >
                                 {voices.map((voice) => (
