@@ -14,8 +14,8 @@ const App = () => {
     // List of default voices to choose from
     const possibleDefaultVoices = [
         "Microsoft Emma Online (Natural) - English (United States)",
-        "Microsoft Jenny Online (Natural) - English (United States)",
-        "Microsoft Andrew Online (Natural) - English (United States)"
+        "Microsoft Andrew Online (Natural) - English (United States)",
+        "Microsoft Jenny Online (Natural) - English (United States)"
     ];
 
     // Function to filter voices by language
@@ -43,10 +43,14 @@ const App = () => {
         populateVoices();
         speechSynthesis.onvoiceschanged = populateVoices;
 
-        // Load voice options from local storage
-        const savedVoiceOptions = JSON.parse(localStorage.getItem('voiceOptions'));
-        if (savedVoiceOptions) {
-            setVoiceOptions(savedVoiceOptions);
+        // Load saved settings from localStorage
+        const savedSettings = JSON.parse(localStorage.getItem('settings'));
+        console.log('Loaded settings from localStorage:', savedSettings);
+
+        if (savedSettings) {
+            setVoiceOptions(savedSettings.voiceOptions || {});
+            setRate(savedSettings.rate || 1);
+            setDelay(savedSettings.delay || 200);
         } else {
             setDefaultVoices();
         }
@@ -54,8 +58,8 @@ const App = () => {
 
     const setDefaultVoices = useCallback(() => {
         const uniquePrefixes = getUniquePrefixes();
-
         let newVoiceOptions = {};
+
         if (uniquePrefixes.length > 0) {
             if (uniquePrefixes.length === 1) {
                 const emmaVoice = possibleDefaultVoices.find(name =>
@@ -75,9 +79,13 @@ const App = () => {
                 ...prev,
                 ...newVoiceOptions
             }));
-            localStorage.setItem('voiceOptions', JSON.stringify(newVoiceOptions));
+            saveSettings({
+                voiceOptions: newVoiceOptions,
+                rate,
+                delay
+            });
         }
-    }, [voices]);
+    }, [voices, rate, delay]);
 
     useEffect(() => {
         if (text) {
@@ -155,7 +163,11 @@ const App = () => {
                 ...prev,
                 [prefix]: newVoice
             };
-            localStorage.setItem('voiceOptions', JSON.stringify(newVoiceOptions));
+            saveSettings({
+                voiceOptions: newVoiceOptions,
+                rate,
+                delay
+            });
             return newVoiceOptions;
         });
     };
@@ -167,6 +179,11 @@ const App = () => {
         } else {
             speakText();
         }
+    };
+
+    const saveSettings = (settings) => {
+        localStorage.setItem('settings', JSON.stringify(settings));
+        console.log('Settings saved to localStorage:', settings);
     };
 
     const uniquePrefixes = getUniquePrefixes();
@@ -233,7 +250,15 @@ const App = () => {
                         max="2"
                         step="0.1"
                         value={rate}
-                        onChange={(e) => setRate(parseFloat(e.target.value))}
+                        onChange={(e) => {
+                            const newRate = parseFloat(e.target.value);
+                            setRate(newRate);
+                            saveSettings({
+                                voiceOptions,
+                                rate: newRate,
+                                delay
+                            });
+                        }}
                         className="w-full"
                     />
                     <div className="text-center text-lg font-medium text-blue-600 mt-2">{rate}</div>
@@ -244,7 +269,15 @@ const App = () => {
                         <select
                             className="w-full p-2 border border-gray-300 rounded-lg bg-white pr-10 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                             value={delay}
-                            onChange={(e) => setDelay(parseInt(e.target.value))}
+                            onChange={(e) => {
+                                const newDelay = parseInt(e.target.value);
+                                setDelay(newDelay);
+                                saveSettings({
+                                    voiceOptions,
+                                    rate,
+                                    delay: newDelay
+                                });
+                            }}
                         >
                             <option value={0}>0</option>
                             <option value={200}>200</option>
