@@ -2,7 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './index.css';
 
 const App = () => {
-    const [text, setText] = useState('');
+    const [text, setText] = useState('A: Hi, are you feeling better?\n' +
+        'B: I\'m good. How about you?\n' +
+        'C: Hey, were you feeling bad?');
     const [voices, setVoices] = useState([]);
     const [voiceOptions, setVoiceOptions] = useState({});
     const [rate, setRate] = useState(1);
@@ -40,6 +42,14 @@ const App = () => {
 
         populateVoices();
         speechSynthesis.onvoiceschanged = populateVoices;
+
+        // Load voice options from local storage
+        const savedVoiceOptions = JSON.parse(localStorage.getItem('voiceOptions'));
+        if (savedVoiceOptions) {
+            setVoiceOptions(savedVoiceOptions);
+        } else {
+            setDefaultVoices();
+        }
     }, []);
 
     const setDefaultVoices = useCallback(() => {
@@ -48,30 +58,24 @@ const App = () => {
         let newVoiceOptions = {};
         if (uniquePrefixes.length > 0) {
             if (uniquePrefixes.length === 1) {
-                // For a single unique prefix, set Emma as the default voice
                 const emmaVoice = possibleDefaultVoices.find(name =>
-                    voices.some(voice => voice.name === name)
+                    name.toLowerCase().includes('emma')
                 );
 
                 if (emmaVoice) {
                     newVoiceOptions[uniquePrefixes[0]] = emmaVoice;
                 }
             } else {
-                // For multiple prefixes, set default voices from the list
-                const availableVoices = possibleDefaultVoices.filter(name =>
-                    voices.some(voice => voice.name === name)
-                );
-                const randomizedVoices = shuffleArray(availableVoices);
-
                 uniquePrefixes.forEach((prefix, index) => {
-                    newVoiceOptions[prefix] = randomizedVoices[index % randomizedVoices.length];
+                    newVoiceOptions[prefix] = possibleDefaultVoices[index % possibleDefaultVoices.length];
                 });
-                newVoiceOptions["DEFAULT"] = randomizedVoices[0] || '';
+                newVoiceOptions["DEFAULT"] = possibleDefaultVoices[0] || '';
             }
             setVoiceOptions(prev => ({
                 ...prev,
                 ...newVoiceOptions
             }));
+            localStorage.setItem('voiceOptions', JSON.stringify(newVoiceOptions));
         }
     }, [voices]);
 
@@ -80,6 +84,20 @@ const App = () => {
             setDefaultVoices();
         }
     }, [text, setDefaultVoices]);
+
+    const getUniquePrefixes = useCallback(() => {
+        const lines = text.split('\n');
+        const prefixes = new Set();
+
+        lines.forEach((line) => {
+            const prefix = line.substring(0, 2);
+            if (prefix.match(/[A-Z]:/)) {
+                prefixes.add(prefix);
+            }
+        });
+
+        return Array.from(prefixes);
+    }, [text]);
 
     const speakText = () => {
         if (window.speechSynthesis.speaking) {
@@ -132,35 +150,15 @@ const App = () => {
     };
 
     const handleVoiceChange = (prefix, newVoice) => {
-        setVoiceOptions(prev => ({
-            ...prev,
-            [prefix]: newVoice
-        }));
-    };
-
-    const getUniquePrefixes = () => {
-        const lines = text.split('\n');
-        const prefixes = new Set();
-
-        lines.forEach((line) => {
-            const prefix = line.substring(0, 2);
-            if (prefix.match(/[A-Z]:/)) {
-                prefixes.add(prefix);
-            }
+        setVoiceOptions(prev => {
+            const newVoiceOptions = {
+                ...prev,
+                [prefix]: newVoice
+            };
+            localStorage.setItem('voiceOptions', JSON.stringify(newVoiceOptions));
+            return newVoiceOptions;
         });
-
-        return Array.from(prefixes);
     };
-
-    const shuffleArray = (array) => {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
-    };
-
-    const uniquePrefixes = getUniquePrefixes();
 
     const handlePlayPause = () => {
         if (isPlaying) {
@@ -170,6 +168,8 @@ const App = () => {
             speakText();
         }
     };
+
+    const uniquePrefixes = getUniquePrefixes();
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
@@ -181,11 +181,12 @@ const App = () => {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                 />
-                {uniquePrefixes.length > 0 && uniquePrefixes.map((prefix,index) => (
+                {uniquePrefixes.length > 0 && uniquePrefixes.map((prefix, index) => (
                     <div key={prefix} className="mb-4">
                         <label className="block text-lg font-medium text-gray-700 mb-2">Voice {prefix}</label>
                         <div className="relative">
                             <select
+                                id={`voice-${prefix}`}
                                 className="w-full p-2 border border-gray-300 rounded-lg bg-white pr-10 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 value={voiceOptions[prefix] || possibleDefaultVoices[index] || ''}
                                 onChange={(e) => handleVoiceChange(prefix, e.target.value)}
@@ -207,6 +208,7 @@ const App = () => {
                         <label className="block text-lg font-medium text-gray-700 mb-2">Default Voice</label>
                         <div className="relative">
                             <select
+                                id='voice-default'
                                 className="w-full p-2 border border-gray-300 rounded-lg bg-white pr-10 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 value={voiceOptions["DEFAULT"] || possibleDefaultVoices[0] || ''}
                                 onChange={(e) => handleVoiceChange("DEFAULT", e.target.value)}
