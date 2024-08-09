@@ -11,6 +11,7 @@ const App = () => {
     const [rate, setRate] = useState(1);
     const [delay, setDelay] = useState(200);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [isPaused, setIsPaused] = useState(false);
 
     // List of default voices to choose from
     const possibleDefaultVoices = [
@@ -186,13 +187,23 @@ const App = () => {
     };
 
     const handlePlayPause = () => {
-        window.speechSynthesis.cancel();
-
         if (isPlaying) {
-            setIsPlaying(false);
+            if (isPaused) {
+                window.speechSynthesis.resume();
+                setIsPaused(false);
+            } else {
+                window.speechSynthesis.pause();
+                setIsPaused(true);
+            }
         } else {
             speakText();
         }
+    };
+
+    const handleStop = () => {
+        window.speechSynthesis.cancel();
+        setIsPlaying(false);
+        setIsPaused(false);
     };
 
     const saveSettings = (settings) => {
@@ -296,12 +307,20 @@ const App = () => {
                         className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                 </div>
-                <button
-                    onClick={handlePlayPause}
-                    className={`w-full py-3 px-6 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isPlaying ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'}`}
-                >
-                    {isPlaying ? 'Pause' : 'Play'}
-                </button>
+                <div className="flex space-x-4">
+                    <button
+                        onClick={handlePlayPause}
+                        className={`w-full py-3 px-6 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isPlaying ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'}`}
+                    >
+                        {isPlaying ? (isPaused ? 'Resume' : 'Pause') : 'Play'}
+                    </button>
+                    <button
+                        onClick={handleStop}
+                        className="w-full py-3 px-6 text-white bg-gray-500 hover:bg-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        Stop
+                    </button>
+                </div>
             </div>
         </div>
     );
