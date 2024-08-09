@@ -12,6 +12,7 @@ const App = () => {
     const [delay, setDelay] = useState(200);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
+    const [selectedWord, setSelectedWord] = useState('');
 
     // List of default voices to choose from
     const possibleDefaultVoices = [
@@ -150,7 +151,7 @@ const App = () => {
                     utterance.voice = voiceMap[prefix] || voiceMap["DEFAULT"];
                     utterance.rate = rate;
                     utterance.onboundary = (e) => {
-                        // console.log('xxxx.Boundary:', e.charIndex, e.charLength);
+                        console.log('Boundary:', e.charIndex, e.charLength);
                     }
 
                     return new Promise((resolve) => {
@@ -165,7 +166,17 @@ const App = () => {
                 }
             };
 
-            speakLine(0);
+            if (selectedWord) {
+                const utterance = new SpeechSynthesisUtterance(selectedWord);
+                utterance.voice = voiceMap["DEFAULT"];
+                utterance.rate = rate;
+                utterance.onend = () => {
+                    setIsPlaying(false);
+                };
+                window.speechSynthesis.speak(utterance);
+            } else {
+                speakLine(0);
+            }
         } else {
             console.error('No text to read aloud');
         }
@@ -216,6 +227,11 @@ const App = () => {
         localStorage.setItem('text', text);
     }, [text]);
 
+    const handleTextSelection = (e) => {
+        const selectedText = window.getSelection().toString();
+        setSelectedWord(selectedText);
+    };
+
     const uniquePrefixes = getUniquePrefixes();
 
     return (
@@ -227,6 +243,7 @@ const App = () => {
                     placeholder="Type your text here..."
                     value={text}
                     onChange={(e) => setText(e.target.value)}
+                    onMouseUp={handleTextSelection}
                 />
                 {uniquePrefixes.length > 0 && uniquePrefixes.map((prefix, index) => (
                     <div key={prefix} className="mb-4">
