@@ -13,6 +13,7 @@ const App = () => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [selectedWord, setSelectedWord] = useState('');
+    const [currentWord, setCurrentWord] = useState('');
 
     // List of default voices to choose from
     const possibleDefaultVoices = [
@@ -151,12 +152,13 @@ const App = () => {
                     utterance.voice = voiceMap[prefix] || voiceMap["DEFAULT"];
                     utterance.rate = rate;
                     utterance.onboundary = (e) => {
-                        console.log('Boundary:', e.charIndex, e.charLength);
-                    }
+                        const word = sentence.substring(e.charIndex, e.charIndex + e.charLength);
+                        setCurrentWord(word);
+                    };
 
                     return new Promise((resolve) => {
                         utterance.onend = () => {
-                            setTimeout(() => resolve(), delay);
+                            setTimeout(resolve, delay);
                         };
 
                         window.speechSynthesis.speak(utterance);
@@ -232,6 +234,19 @@ const App = () => {
         setSelectedWord(selectedText);
     };
 
+    const handleDoubleClick = (e) => {
+        handleStop();
+        const selectedText = window.getSelection().toString();
+        setSelectedWord(selectedText);
+        speakText();
+    };
+
+    const highlightCurrentWord = (text, currentWord) => {
+        if (!currentWord) return text;
+        const regex = new RegExp(`(${currentWord})`, 'gi');
+        return text.replace(regex, '<mark>$1</mark>');
+    };
+
     const uniquePrefixes = getUniquePrefixes();
 
     return (
@@ -244,6 +259,7 @@ const App = () => {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     onMouseUp={handleTextSelection}
+                    onDoubleClick={handleDoubleClick}
                 />
                 {uniquePrefixes.length > 0 && uniquePrefixes.map((prefix, index) => (
                     <div key={prefix} className="mb-4">
@@ -256,9 +272,7 @@ const App = () => {
                                 onChange={(e) => handleVoiceChange(prefix, e.target.value)}
                             >
                                 {voices.map((voice) => (
-                                    <option key={voice.name} value={voice.name}>
-                                        {voice.name}
-                                    </option>
+                                    <option key={voice.name} value={voice.name}>{voice.name}</option>
                                 ))}
                             </select>
                             <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -272,15 +286,13 @@ const App = () => {
                         <label className="block text-lg font-medium text-gray-700 mb-2">Default Voice</label>
                         <div className="relative">
                             <select
-                                id='voice-default'
+                                id="voice-default"
                                 className="w-full p-2 border border-gray-300 rounded-lg bg-white pr-10 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                value={voiceOptions["DEFAULT"] || possibleDefaultVoices[0] || ''}
+                                value={voiceOptions["DEFAULT"] || ''}
                                 onChange={(e) => handleVoiceChange("DEFAULT", e.target.value)}
                             >
                                 {voices.map((voice) => (
-                                    <option key={voice.name} value={voice.name}>
-                                        {voice.name}
-                                    </option>
+                                    <option key={voice.name} value={voice.name}>{voice.name}</option>
                                 ))}
                             </select>
                             <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
