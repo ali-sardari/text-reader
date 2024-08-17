@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, {useState, useEffect, useCallback, useRef} from 'react';
 import './index.css';
 
 const App = () => {
@@ -14,8 +14,16 @@ const App = () => {
     const [isPaused, setIsPaused] = useState(false);
     const [selectedWord, setSelectedWord] = useState('');
     const [currentWord, setCurrentWord] = useState('');
+    // const [isStop, setIsStop] = useState(false);
+    const isStopRef = useRef(false);
 
-    // List of default voices to choose from
+    // useEffect(() => {
+    //     console.log('xxx.0.isStopRef:', isStopRef);
+    //     if (isStopRef.current) {
+    //         window.speechSynthesis.speaking && window.speechSynthesis.cancel();
+    //     }
+    // }, [isStopRef]);
+
     const possibleDefaultVoices = [
         "Microsoft Eric Online (Natural) - English (United States)",
         "Microsoft Andrew Online (Natural) - English (United States)",
@@ -139,6 +147,12 @@ const App = () => {
             });
 
             const speakLine = async (index) => {
+                if (isStopRef.current) {
+                    window.speechSynthesis.cancel();
+                    console.log('xxx.4.speakLine:', {isStopRef});
+                    return;
+                }
+
                 if (index < lines.length) {
                     let prefix = lines[index].substring(0, 2);
                     let sentence = lines[index];
@@ -156,18 +170,41 @@ const App = () => {
                         setCurrentWord(word);
                     };
 
-                    return new Promise((resolve) => {
+                    return new Promise((resolve, reject) => {
+                        let timeoutId;
+
                         utterance.onend = () => {
-                            setTimeout(resolve, delay);
+                            if (isStopRef.current) {
+                                clearTimeout(timeoutId);
+                                reject('Speech synthesis stopped');
+                            } else {
+                                timeoutId = setTimeout(resolve, delay);
+
+                                setTimeout(() => {
+                                    if (isStopRef.current) {
+                                        clearTimeout(timeoutId);
+                                        reject('Speech synthesis stopped');
+                                        return;
+                                    }
+
+                                    resolve();
+                                }, delay);
+                            }
                         };
 
                         window.speechSynthesis.speak(utterance);
-                    }).then(() => speakLine(index + 1));
+                    }).then(() => {
+                        if (!isStopRef.current) {
+                            return speakLine(index + 1);
+                        }
+                    }).catch((error) => {
+                        console.error(error);
+                        setIsPlaying(false);
+                    });
                 } else {
                     setIsPlaying(false);
                 }
             };
-
             if (selectedWord) {
                 const utterance = new SpeechSynthesisUtterance(selectedWord);
                 utterance.voice = voiceMap["DEFAULT"];
@@ -200,6 +237,8 @@ const App = () => {
     };
 
     const handlePlayPause = () => {
+        isStopRef.current = false;
+
         if (isPlaying) {
             if (isPaused) {
                 window.speechSynthesis.resume();
@@ -214,7 +253,10 @@ const App = () => {
     };
 
     const handleStop = () => {
+        console.log('xxx.5.speakLine:', {isStopRef});
+
         window.speechSynthesis.cancel();
+        isStopRef.current = true;
         setIsPlaying(false);
         setIsPaused(false);
     };
@@ -275,8 +317,9 @@ const App = () => {
                                     <option key={voice.name} value={voice.name}>{voice.name}</option>
                                 ))}
                             </select>
-                            <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                            <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500"
+                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </div>
                     </div>
@@ -295,8 +338,9 @@ const App = () => {
                                     <option key={voice.name} value={voice.name}>{voice.name}</option>
                                 ))}
                             </select>
-                            <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                            <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500"
+                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </div>
                     </div>
