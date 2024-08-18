@@ -12,7 +12,6 @@ const App = () => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [selectedWord, setSelectedWord] = useState('');
-    const [currentWord, setCurrentWord] = useState('');
     const isStopRef = useRef(false);
     const textareaRef = useRef(null);
     const activeTextRef = useRef(null);
@@ -32,39 +31,23 @@ const App = () => {
         });
     };
 
-    useEffect(() => {
-        speechSynthesis.onvoiceschanged = () => {
-            if (typeof speechSynthesis === "undefined") {
-                return;
+    const getUniquePrefixes = useCallback(() => {
+        const lines = text.split('\n');
+        const prefixes = new Set();
+
+        lines.forEach((line) => {
+            const prefix = line.substring(0, 2);
+            if (prefix.match(/[A-Z]:/)) {
+                prefixes.add(prefix);
             }
+        });
 
-            const allVoices = speechSynthesis.getVoices();
+        console.log('xxx.3.prefixes:', {prefixes, lines});
 
-            if (allVoices.length === 0) {
-                console.error('xxx.No voices found.');
-                return;
-            }
+        return Array.from(prefixes);
+    }, [text]);
 
-            const englishVoices = filterEnglishVoices(allVoices).sort((a, b) => {
-                return a.lang.localeCompare(b.lang);
-            });
-
-            setVoices(englishVoices);
-        };
-
-        // Load saved settings from localStorage
-        const savedSettings = JSON.parse(localStorage.getItem('settings'));
-        console.log('xxx.1.savedSettings:', savedSettings);
-
-        if (savedSettings) {
-            setVoiceOptions(savedSettings.voiceOptions || {});
-            setRate(savedSettings.rate || 1);
-            setDelay(savedSettings.delay || 200);
-        } else {
-            setDefaultVoices();
-        }
-    }, []);
-
+    // eslint-disable-next-line
     const setDefaultVoices = useCallback(() => {
         const uniquePrefixes = getUniquePrefixes();
 
@@ -96,7 +79,41 @@ const App = () => {
             newVoiceOptions["DEFAULT"] = possibleDefaultVoices[0] || '';
             setVoiceOptions(newVoiceOptions);
         }
-    }, [voices, rate, delay]);
+        // eslint-disable-next-line
+    }, [rate, voices, delay, getUniquePrefixes, possibleDefaultVoices]);
+
+    useEffect(() => {
+        speechSynthesis.onvoiceschanged = () => {
+            if (typeof speechSynthesis === "undefined") {
+                return;
+            }
+
+            const allVoices = speechSynthesis.getVoices();
+
+            if (allVoices.length === 0) {
+                console.error('xxx.No voices found.');
+                return;
+            }
+
+            const englishVoices = filterEnglishVoices(allVoices).sort((a, b) => {
+                return a.lang.localeCompare(b.lang);
+            });
+
+            setVoices(englishVoices);
+        };
+
+        // Load saved settings from localStorage
+        const savedSettings = JSON.parse(localStorage.getItem('settings'));
+        console.log('xxx.1.savedSettings:', savedSettings);
+
+        if (savedSettings) {
+            setVoiceOptions(savedSettings.voiceOptions || {});
+            setRate(savedSettings.rate || 1);
+            setDelay(savedSettings.delay || 500);
+        } else {
+            setDefaultVoices();
+        }
+    }, [setDefaultVoices]);
 
     useEffect(() => {
         console.log('xxx.4.text:', text);
@@ -105,21 +122,6 @@ const App = () => {
         }
     }, [text, setDefaultVoices]);
 
-    const getUniquePrefixes = useCallback(() => {
-        const lines = text.split('\n');
-        const prefixes = new Set();
-
-        lines.forEach((line) => {
-            const prefix = line.substring(0, 2);
-            if (prefix.match(/[A-Z]:/)) {
-                prefixes.add(prefix);
-            }
-        });
-
-        console.log('xxx.3.prefixes:', {prefixes, lines});
-
-        return Array.from(prefixes);
-    }, [text]);
 
     const speakText = () => {
         if (window.speechSynthesis.speaking) {
@@ -139,7 +141,7 @@ const App = () => {
                 }
             });
 
-            let startLineIdx = 0;
+            // let startLineIdx = 0;
 
             const speakLine = async (index) => {
                 if (isStopRef.current) {
@@ -151,10 +153,10 @@ const App = () => {
                     let prefix = lines[index].substring(0, 2);
                     let sentence = lines[index];
 
-                    let skipLength = 0;
+                    // let skipLength = 0;
 
                     if (prefix.match(/[A-Z]:/)) {
-                        skipLength = 3;
+                        // skipLength = 3;
                         sentence = lines[index].substring(2).trim();
                     } else {
                         prefix = "DEFAULT";
@@ -162,14 +164,14 @@ const App = () => {
 
                     activeTextRef.current.innerText = sentence;
 
-                    if (index > 0) {
-                        startLineIdx += lines[index - 1].length + 1; // +1 for the newline character
-                    }
+                    // if (index > 0) {
+                    //     startLineIdx += lines[index - 1].length + 1; // +1 for the newline character
+                    // }
 
                     const utterance = new SpeechSynthesisUtterance(sentence);
                     utterance.voice = voiceMap[prefix] || voiceMap["DEFAULT"];
                     utterance.rate = rate;
-                    utterance.onboundary = (e) => {
+                    utterance.onboundary = () => {
                         // const word = sentence.substring(e.charIndex, e.charIndex + e.charLength);
                         // setCurrentWord(word);
 
@@ -222,7 +224,13 @@ const App = () => {
                 };
                 window.speechSynthesis.speak(utterance);
             } else {
-                speakLine(0);
+                speakLine(0)
+                    .then(() => {
+                        console.log('Speech synthesis completed successfully');
+                    })
+                    .catch((error) => {
+                        console.error('Error during speech synthesis:', error);
+                    });
             }
         } else {
             console.error('No text to read aloud');
@@ -277,12 +285,12 @@ const App = () => {
         localStorage.setItem('text', text);
     }, [text]);
 
-    const handleTextSelection = (e) => {
+    const handleTextSelection = () => {
         const selectedText = window.getSelection().toString();
         setSelectedWord(selectedText);
     };
 
-    const handleDoubleClick = (e) => {
+    const handleDoubleClick = () => {
         handleStop();
         const selectedText = window.getSelection().toString();
         setSelectedWord(selectedText);
@@ -297,8 +305,9 @@ const App = () => {
                 <h1 className="text-3xl font-bold text-gray-800 mb-6">Text Reader</h1>
                 <div className="mb-6">
                     <h2 ref={activeTextRef}
-                        className="block text-xl font-bold bg-yellow-200/30 text-gray-700 mb-2 p-4 border-2 border-yellow-600 rounded-lg shadow-md"></h2>
-                </div>
+                        className="block text-xl font-bold bg-yellow-200/30 text-gray-700 mb-2 p-4 border-2 border-yellow-600 rounded-lg shadow-md">
+                        {activeTextRef.current?.innerText || 'No content available'}
+                    </h2></div>
                 <textarea
                     ref={textareaRef}
                     className="w-full h-80 p-4 border border-gray-300 rounded-lg resize-none mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -359,7 +368,8 @@ const App = () => {
                         step="0.1"
                         value={rate}
                         onChange={(e) => {
-                            setRate(e.target.value);
+                            const newRate = parseFloat(e.target.value);
+                            setRate(newRate);
                             saveSettings({
                                 voiceOptions,
                                 rate: e.target.value,
@@ -375,7 +385,8 @@ const App = () => {
                         type="number"
                         value={delay}
                         onChange={(e) => {
-                            setDelay(e.target.value);
+                            const newDelay = parseInt(e.target.value, 10);
+                            setDelay(newDelay);
                             saveSettings({
                                 voiceOptions,
                                 rate,
