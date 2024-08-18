@@ -2,7 +2,6 @@ import React, {useState, useEffect, useCallback, useRef} from 'react';
 import './index.css';
 
 const App = () => {
-    // Load the text from local storage, or use the default text if none exists
     const initialText = localStorage.getItem('text') || '';
 
     const [text, setText] = useState(initialText);
@@ -16,6 +15,7 @@ const App = () => {
     const [currentWord, setCurrentWord] = useState('');
     const isStopRef = useRef(false);
     const textareaRef = useRef(null);
+    const activeTextRef = useRef(null);
 
     const possibleDefaultVoices = [
         "Microsoft Eric Online (Natural) - English (United States)",
@@ -160,6 +160,8 @@ const App = () => {
                         prefix = "DEFAULT";
                     }
 
+                    activeTextRef.current.innerText = sentence;
+
                     if (index > 0) {
                         startLineIdx += lines[index - 1].length + 1; // +1 for the newline character
                     }
@@ -171,8 +173,8 @@ const App = () => {
                         // const word = sentence.substring(e.charIndex, e.charIndex + e.charLength);
                         // setCurrentWord(word);
 
-                        textareaRef.current.setSelectionRange(skipLength + startLineIdx + e.charIndex, skipLength + startLineIdx + e.charIndex + e.charLength);
-                        textareaRef.current.focus();
+                        // textareaRef.current.setSelectionRange(skipLength + startLineIdx + e.charIndex, skipLength + startLineIdx + e.charIndex + e.charLength);
+                        // textareaRef.current.focus();
                     };
 
                     return new Promise((resolve, reject) => {
@@ -259,8 +261,6 @@ const App = () => {
     };
 
     const handleStop = () => {
-        console.log('xxx.5.speakLine:', {isStopRef});
-
         window.speechSynthesis.cancel();
         isStopRef.current = true;
         setIsPlaying(false);
@@ -270,7 +270,6 @@ const App = () => {
 
     const saveSettings = (settings) => {
         localStorage.setItem('settings', JSON.stringify(settings));
-        console.log('Settings saved to localStorage:', settings);
     };
 
     // Save text to local storage when it changes
@@ -290,18 +289,16 @@ const App = () => {
         speakText();
     };
 
-    const highlightCurrentWord = (text, currentWord) => {
-        if (!currentWord) return text;
-        const regex = new RegExp(`(${currentWord})`, 'gi');
-        return text.replace(regex, '<mark>$1</mark>');
-    };
-
     const uniquePrefixes = getUniquePrefixes();
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
             <div className="w-full max-w-screen-lg bg-white p-8 rounded-lg shadow-lg">
                 <h1 className="text-3xl font-bold text-gray-800 mb-6">Text Reader</h1>
+                <div className="mb-6">
+                    <h2 ref={activeTextRef}
+                        className="block text-xl font-bold bg-yellow-200/30 text-gray-700 mb-2 p-4 border-2 border-yellow-600 rounded-lg shadow-md"></h2>
+                </div>
                 <textarea
                     ref={textareaRef}
                     className="w-full h-80 p-4 border border-gray-300 rounded-lg resize-none mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
