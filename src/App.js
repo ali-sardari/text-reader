@@ -14,15 +14,8 @@ const App = () => {
     const [isPaused, setIsPaused] = useState(false);
     const [selectedWord, setSelectedWord] = useState('');
     const [currentWord, setCurrentWord] = useState('');
-    // const [isStop, setIsStop] = useState(false);
     const isStopRef = useRef(false);
-
-    // useEffect(() => {
-    //     console.log('xxx.0.isStopRef:', isStopRef);
-    //     if (isStopRef.current) {
-    //         window.speechSynthesis.speaking && window.speechSynthesis.cancel();
-    //     }
-    // }, [isStopRef]);
+    const textareaRef = useRef(null);
 
     const possibleDefaultVoices = [
         "Microsoft Eric Online (Natural) - English (United States)",
@@ -146,28 +139,40 @@ const App = () => {
                 }
             });
 
+            let startLineIdx = 0;
+
             const speakLine = async (index) => {
                 if (isStopRef.current) {
                     window.speechSynthesis.cancel();
-                    console.log('xxx.4.speakLine:', {isStopRef});
                     return;
                 }
 
                 if (index < lines.length) {
                     let prefix = lines[index].substring(0, 2);
                     let sentence = lines[index];
+
+                    let skipLength = 0;
+
                     if (prefix.match(/[A-Z]:/)) {
+                        skipLength = 3;
                         sentence = lines[index].substring(2).trim();
                     } else {
                         prefix = "DEFAULT";
+                    }
+
+                    if (index > 0) {
+                        startLineIdx += lines[index - 1].length + 1; // +1 for the newline character
                     }
 
                     const utterance = new SpeechSynthesisUtterance(sentence);
                     utterance.voice = voiceMap[prefix] || voiceMap["DEFAULT"];
                     utterance.rate = rate;
                     utterance.onboundary = (e) => {
-                        const word = sentence.substring(e.charIndex, e.charIndex + e.charLength);
-                        setCurrentWord(word);
+                        // const word = sentence.substring(e.charIndex, e.charIndex + e.charLength);
+                        // setCurrentWord(word);
+
+                        textareaRef.current.setSelectionRange(skipLength + startLineIdx + e.charIndex, skipLength + startLineIdx + e.charIndex + e.charLength);
+                        textareaRef.current.focus();
                     };
 
                     return new Promise((resolve, reject) => {
@@ -205,6 +210,7 @@ const App = () => {
                     setIsPlaying(false);
                 }
             };
+
             if (selectedWord) {
                 const utterance = new SpeechSynthesisUtterance(selectedWord);
                 utterance.voice = voiceMap["DEFAULT"];
@@ -259,6 +265,7 @@ const App = () => {
         isStopRef.current = true;
         setIsPlaying(false);
         setIsPaused(false);
+        setSelectedWord(null);
     };
 
     const saveSettings = (settings) => {
@@ -296,6 +303,7 @@ const App = () => {
             <div className="w-full max-w-screen-lg bg-white p-8 rounded-lg shadow-lg">
                 <h1 className="text-3xl font-bold text-gray-800 mb-6">Text Reader</h1>
                 <textarea
+                    ref={textareaRef}
                     className="w-full h-80 p-4 border border-gray-300 rounded-lg resize-none mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Type your text here..."
                     value={text}
