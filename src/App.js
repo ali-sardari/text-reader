@@ -31,7 +31,45 @@ const App = () => {
         });
     };
 
-    const getUniquePrefixes = useCallback(() => {
+    useEffect(() => {
+        console.log('xxx.1.1.load app');
+
+        speechSynthesis.onvoiceschanged = () => {
+            if (typeof speechSynthesis === "undefined") {
+                return;
+            }
+
+            const allVoices = speechSynthesis.getVoices();
+
+            if (allVoices.length === 0) {
+                console.error('xxx.No voices found.');
+                return;
+            }
+
+            const englishVoices = filterEnglishVoices(allVoices).sort((a, b) => {
+                return a.lang.localeCompare(b.lang);
+            });
+
+            setVoices(englishVoices);
+        };
+
+        // Load saved settings from localStorage
+        const savedSettings = JSON.parse(localStorage.getItem('settings'));
+
+        if (savedSettings) {
+            console.log('xxx.1.2.load settings from local storage:', savedSettings);
+
+            setVoiceOptions(savedSettings.voiceOptions || {});
+            setRate(savedSettings.rate || 1);
+            setDelay(savedSettings.delay || 500);
+        } else {
+            console.log('xxx.1.3.load settings from defaults:', savedSettings);
+
+            setDefaultVoices();
+        }
+    }, []);
+
+    const getUniquePrefixes = () => {
         const lines = text.split('\n');
         const prefixes = new Set();
 
@@ -45,13 +83,12 @@ const App = () => {
         console.log('xxx.3.prefixes:', {prefixes, lines});
 
         return Array.from(prefixes);
-    }, [text]);
+    };
 
-    // eslint-disable-next-line
-    const setDefaultVoices = useCallback(() => {
+    const setDefaultVoices = () => {
         const uniquePrefixes = getUniquePrefixes();
 
-        console.log('xxx.2.uniquePrefixes:', uniquePrefixes);
+        console.log('xxx.2.setDefaultVoices:', setDefaultVoices);
 
         let newVoiceOptions = {};
 
@@ -79,48 +116,15 @@ const App = () => {
             newVoiceOptions["DEFAULT"] = possibleDefaultVoices[0] || '';
             setVoiceOptions(newVoiceOptions);
         }
-        // eslint-disable-next-line
-    }, [rate, voices, delay, getUniquePrefixes, possibleDefaultVoices]);
+    };
 
-    useEffect(() => {
-        speechSynthesis.onvoiceschanged = () => {
-            if (typeof speechSynthesis === "undefined") {
-                return;
-            }
 
-            const allVoices = speechSynthesis.getVoices();
-
-            if (allVoices.length === 0) {
-                console.error('xxx.No voices found.');
-                return;
-            }
-
-            const englishVoices = filterEnglishVoices(allVoices).sort((a, b) => {
-                return a.lang.localeCompare(b.lang);
-            });
-
-            setVoices(englishVoices);
-        };
-
-        // Load saved settings from localStorage
-        const savedSettings = JSON.parse(localStorage.getItem('settings'));
-        console.log('xxx.1.savedSettings:', savedSettings);
-
-        if (savedSettings) {
-            setVoiceOptions(savedSettings.voiceOptions || {});
-            setRate(savedSettings.rate || 1);
-            setDelay(savedSettings.delay || 500);
-        } else {
-            setDefaultVoices();
-        }
-    }, [setDefaultVoices]);
-
-    useEffect(() => {
-        console.log('xxx.4.text:', text);
-        if (text) {
-            setDefaultVoices();
-        }
-    }, [text, setDefaultVoices]);
+    // useEffect(() => {
+    //     console.log('xxx.4.text:', text);
+    //     if (text) {
+    //         setDefaultVoices();
+    //     }
+    // }, [text, setDefaultVoices]);
 
 
     const speakText = () => {
@@ -385,13 +389,12 @@ const App = () => {
                         type="number"
                         value={delay}
                         onChange={(e) => {
-                            const newDelay = parseInt(e.target.value, 10);
-                            setDelay(newDelay);
-                            saveSettings({
-                                voiceOptions,
-                                rate,
-                                delay: e.target.value
-                            });
+                            setDelay(parseInt(e.target.value));
+                            // saveSettings({
+                            //     voiceOptions,
+                            //     rate,
+                            //     delay: e.target.value
+                            // });
                         }}
                         className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
