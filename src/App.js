@@ -8,7 +8,6 @@ const App = () => {
         "Microsoft Emma Online (Natural) - English (United States)",
         "Microsoft Jenny Online (Natural) - English (United States)"
     ];
-    // const initialText = localStorage.getItem('text') || '';
 
     const [voices, setVoices] = useState([]);
     const [voiceOptions, setVoiceOptions] = useState({});
@@ -66,6 +65,7 @@ const App = () => {
 
             setDefaultVoices();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
