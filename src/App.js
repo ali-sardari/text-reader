@@ -1,12 +1,18 @@
-import React, {useState, useEffect, useCallback, useRef} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import './index.css';
 
 const App = () => {
-    const initialText = localStorage.getItem('text') || '';
+    const possibleDefaultVoices = [
+        "Microsoft Eric Online (Natural) - English (United States)",
+        "Microsoft Andrew Online (Natural) - English (United States)",
+        "Microsoft Emma Online (Natural) - English (United States)",
+        "Microsoft Jenny Online (Natural) - English (United States)"
+    ];
+    // const initialText = localStorage.getItem('text') || '';
 
-    const [text, setText] = useState(initialText);
     const [voices, setVoices] = useState([]);
     const [voiceOptions, setVoiceOptions] = useState({});
+    const [text, setText] = useState(localStorage.getItem('text') || '');
     const [rate, setRate] = useState(1);
     const [delay, setDelay] = useState(200);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -15,13 +21,6 @@ const App = () => {
     const isStopRef = useRef(false);
     const textareaRef = useRef(null);
     const activeTextRef = useRef(null);
-
-    const possibleDefaultVoices = [
-        "Microsoft Eric Online (Natural) - English (United States)",
-        "Microsoft Andrew Online (Natural) - English (United States)",
-        "Microsoft Emma Online (Natural) - English (United States)",
-        "Microsoft Jenny Online (Natural) - English (United States)"
-    ];
 
     // Function to filter voices by language
     const filterEnglishVoices = (voices) => {
@@ -69,6 +68,18 @@ const App = () => {
         }
     }, []);
 
+    useEffect(() => {
+        localStorage.setItem('settings', JSON.stringify({
+            voiceOptions,
+            rate,
+            delay
+        }));
+    }, [voiceOptions, rate, delay]);
+
+    useEffect(() => {
+        localStorage.setItem('text', text);
+    }, [text]);
+
     const getUniquePrefixes = () => {
         const lines = text.split('\n');
         const prefixes = new Set();
@@ -87,9 +98,6 @@ const App = () => {
 
     const setDefaultVoices = () => {
         const uniquePrefixes = getUniquePrefixes();
-
-        console.log('xxx.2.setDefaultVoices:', setDefaultVoices);
-
         let newVoiceOptions = {};
 
         if (uniquePrefixes.length > 0) {
@@ -117,15 +125,6 @@ const App = () => {
             setVoiceOptions(newVoiceOptions);
         }
     };
-
-
-    // useEffect(() => {
-    //     console.log('xxx.4.text:', text);
-    //     if (text) {
-    //         setDefaultVoices();
-    //     }
-    // }, [text, setDefaultVoices]);
-
 
     const speakText = () => {
         if (window.speechSynthesis.speaking) {
@@ -175,13 +174,13 @@ const App = () => {
                     const utterance = new SpeechSynthesisUtterance(sentence);
                     utterance.voice = voiceMap[prefix] || voiceMap["DEFAULT"];
                     utterance.rate = rate;
-                    utterance.onboundary = () => {
-                        // const word = sentence.substring(e.charIndex, e.charIndex + e.charLength);
-                        // setCurrentWord(word);
+                    // utterance.onboundary = (e) => {
+                    //     const word = sentence.substring(e.charIndex, e.charIndex + e.charLength);
+                    //     setCurrentWord(word);
 
-                        // textareaRef.current.setSelectionRange(skipLength + startLineIdx + e.charIndex, skipLength + startLineIdx + e.charIndex + e.charLength);
-                        // textareaRef.current.focus();
-                    };
+                    // textareaRef.current.setSelectionRange(skipLength + startLineIdx + e.charIndex, skipLength + startLineIdx + e.charIndex + e.charLength);
+                    // textareaRef.current.focus();
+                    // };
 
                     return new Promise((resolve, reject) => {
                         let timeoutId;
@@ -243,16 +242,10 @@ const App = () => {
 
     const handleVoiceChange = (prefix, newVoice) => {
         setVoiceOptions(prev => {
-            const newVoiceOptions = {
+            return {
                 ...prev,
                 [prefix]: newVoice
             };
-            saveSettings({
-                voiceOptions: newVoiceOptions,
-                rate,
-                delay
-            });
-            return newVoiceOptions;
         });
     };
 
@@ -279,15 +272,6 @@ const App = () => {
         setIsPaused(false);
         setSelectedWord(null);
     };
-
-    const saveSettings = (settings) => {
-        localStorage.setItem('settings', JSON.stringify(settings));
-    };
-
-    // Save text to local storage when it changes
-    useEffect(() => {
-        localStorage.setItem('text', text);
-    }, [text]);
 
     const handleTextSelection = () => {
         const selectedText = window.getSelection().toString();
@@ -335,9 +319,11 @@ const App = () => {
                                     <option key={voice.name} value={voice.name}>{voice.name}</option>
                                 ))}
                             </select>
-                            <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500"
-                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/>
+                            <svg
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                                      d="M19 9l-7 7-7-7"/>
                             </svg>
                         </div>
                     </div>
@@ -356,9 +342,11 @@ const App = () => {
                                     <option key={voice.name} value={voice.name}>{voice.name}</option>
                                 ))}
                             </select>
-                            <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500"
-                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/>
+                            <svg
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                                      d="M19 9l-7 7-7-7"/>
                             </svg>
                         </div>
                     </div>
@@ -368,17 +356,11 @@ const App = () => {
                     <input
                         type="range"
                         min="0.5"
-                        max="2"
+                        max="1.5"
                         step="0.1"
                         value={rate}
                         onChange={(e) => {
-                            const newRate = parseFloat(e.target.value);
-                            setRate(newRate);
-                            saveSettings({
-                                voiceOptions,
-                                rate: e.target.value,
-                                delay
-                            });
+                            setRate(parseFloat(e.target.value));
                         }}
                         className="w-full"
                     />
@@ -390,11 +372,6 @@ const App = () => {
                         value={delay}
                         onChange={(e) => {
                             setDelay(parseInt(e.target.value));
-                            // saveSettings({
-                            //     voiceOptions,
-                            //     rate,
-                            //     delay: e.target.value
-                            // });
                         }}
                         className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
