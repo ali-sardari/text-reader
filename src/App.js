@@ -30,8 +30,6 @@ const App = () => {
     };
 
     useEffect(() => {
-        console.log('xxx.1.1.load app');
-
         speechSynthesis.onvoiceschanged = () => {
             if (typeof speechSynthesis === "undefined") {
                 return;
@@ -55,14 +53,10 @@ const App = () => {
         const savedSettings = JSON.parse(localStorage.getItem('settings'));
 
         if (savedSettings) {
-            console.log('xxx.1.2.load settings from local storage:', savedSettings);
-
             setVoiceOptions(savedSettings.voiceOptions || {});
             setRate(savedSettings.rate || 1);
             setDelay(savedSettings.delay || 500);
         } else {
-            console.log('xxx.1.3.load settings from defaults:', savedSettings);
-
             setDefaultVoices();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -90,8 +84,6 @@ const App = () => {
                 prefixes.add(prefix);
             }
         });
-
-        console.log('xxx.3.prefixes:', {prefixes, lines});
 
         return Array.from(prefixes);
     };
