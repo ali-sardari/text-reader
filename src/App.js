@@ -157,13 +157,13 @@ const App = () => {
                         prefix = "DEFAULT";
                     }
 
-                    activeTextRef.current.innerText = sentence;
+                    activeTextRef.current.innerText = sentence.trim();
 
                     // if (index > 0) {
                     //     startLineIdx += lines[index - 1].length + 1; // +1 for the newline character
                     // }
 
-                    const utterance = new SpeechSynthesisUtterance(sentence);
+                    const utterance = new SpeechSynthesisUtterance(sentence.trim());
                     utterance.voice = voiceMap[prefix] || voiceMap["DEFAULT"];
                     utterance.rate = rate;
                     // utterance.onboundary = (e) => {
