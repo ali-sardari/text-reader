@@ -1,4 +1,5 @@
 # Text Reader
+[![Netlify Status](https://api.netlify.com/api/v1/badges/af443658-85e5-455f-bf6e-39fac822bdde/deploy-status)](https://app.netlify.com/sites/talk-stream/deploys)
 
 ## Overview
 Text Reader is a React app for reading and displaying text, styled with Tailwind CSS and linted with ESLint.
